@@ -106,7 +106,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-    for epoch in epochs:
+    for epoch in range(epochs):
         for image, label in get_batches_fn(batch_size):
             # Training
             pass
@@ -137,11 +137,15 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
+        learning_rate = tf.placeholder(tf.float32)
+        correct_label = tf.placeholder(tf.int8, shape=image_shape)
+
         image_input, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, vgg_path)
         final_layer_ouput = layers(layer3_out, layer4_out, layer7_out, num_classes)
-        # logits, train_op, cross_entropy_loss = optimize(final_layer_ouput, )
+        logits, train_op, cross_entropy_loss = optimize(final_layer_ouput, correct_label, learning_rate, num_classes)
 
         # TODO: Train NN using the train_nn function
+        train_nn(sess, 6, 128, get_batches_fn, train_op, cross_entropy_loss, image_input, correct_label, keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
         #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
