@@ -55,20 +55,27 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # TODO: Implement function
-    conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='same',
+    # Score layer7 and 2x upsample
+    l7_score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='same',
                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding='same',
-                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    output = tf.layers.conv2d_transpose(output, num_classes, 4, 2, padding='same',
-                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    output = tf.layers.conv2d_transpose(output, num_classes, 16, 8, padding='same',
+    l7_2x = tf.layers.conv2d_transpose(l7_score, num_classes, 4, 2, padding='same',
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+
+    # Score layer4, fuse with previous layer, and 2x upsample
+    l4_score = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, padding='same',
+                                kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    l4_fuse = tf.add(l4_score, l7_2x)
+    l4_fuse_2x = tf.layers.conv2d_transpose(l4_fuse, num_classes, 4, 2, padding='same',
+                                            kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+
+    # Score layer3, fuse with previous layer, and 8x upsample (output is FCN-8s)
+    l3_score = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='same',
+                                kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    l3_fuse = tf.add(l3_score, l4_fuse_2x)
+    fcn_8s = tf.layers.conv2d_transpose(l3_fuse, num_classes, 16, 8, padding='same',
                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
-    # Debug output
-    tf.Print(output, [tf.shape(output)])
-
-    return None
+    return fcn_8s
 tests.test_layers(layers)
 
 
@@ -82,7 +89,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
-    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=correct_label))
     optimizer = tf.train.AdamOptimizer(learning_rate)
     train_op = optimizer.minimize(cross_entropy_loss)
 
