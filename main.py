@@ -90,7 +90,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     """
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=correct_label))
-    optimizer = tf.train.AdamOptimizer(learning_rate)
+    optimizer = tf.train.AdamOptimizer(learning_rate, epsilon=0.1)
     train_op = optimizer.minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
@@ -112,7 +112,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
+    print('Training over %d epochs with batch size %d' % (epochs, batch_size))
     for epoch in range(epochs):
+        batch = 1
         for image, label in get_batches_fn(batch_size):
             # Training
             feed_dict = {
@@ -123,15 +125,18 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             sess.run(train_op, feed_dict=feed_dict)
 
             loss = sess.run(cross_entropy_loss, feed_dict=feed_dict)
-
-            print('Epoch {:>2} - Loss: {:>10.4f}'.format(epoch + 1, loss))
+            print('Epoch {:>2}, Batch {:>2} - Loss: {:>10.4f}'.format(epoch + 1, batch, loss))
+            batch += 1
 tests.test_train_nn(train_nn)
 
 
 def run():
+    # Hyperparameters
+    num_epochs = 10
+    batch_size = 24
+
     num_classes = 2  # try changing to 3! modify get_batch_fn to do this
     image_shape = (160, 576)
-    batch_size = 16
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -162,7 +167,7 @@ def run():
 
         # Train NN
         sess.run(tf.global_variables_initializer())
-        train_nn(sess, 10, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
+        train_nn(sess, num_epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
 
         # Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
