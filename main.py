@@ -124,6 +124,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 learning_rate: 0.001}
             sess.run(train_op, feed_dict=feed_dict)
 
+            feed_dict[keep_prob] = 1.0
             loss = sess.run(cross_entropy_loss, feed_dict=feed_dict)
             print('Epoch {:>2}, Batch {:>2} - Loss: {:>10.4f}'.format(epoch + 1, batch, loss))
             batch += 1
@@ -171,6 +172,7 @@ def run():
 
         # Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        print('Saving Finished\a')
 
         # OPTIONAL: Apply the trained model to a video
 
