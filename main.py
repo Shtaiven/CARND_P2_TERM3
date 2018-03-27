@@ -57,28 +57,28 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     # Score layer7 and 2x upsample
     l7_score = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='same',
-                                kernel_initializer= tf.random_normal_initializer(stddev=0.01),
+                                kernel_initializer= tf.truncated_normal_initializer(stddev=0.01),
                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     l7_2x = tf.layers.conv2d_transpose(l7_score, num_classes, 4, 2, padding='same',
-                                       kernel_initializer= tf.random_normal_initializer(stddev=0.01),
+                                       kernel_initializer= tf.truncated_normal_initializer(stddev=0.01),
                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     # Score layer4, fuse with previous layer, and 2x upsample
     l4_score = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, padding='same',
-                                kernel_initializer= tf.random_normal_initializer(stddev=0.01),
+                                kernel_initializer= tf.truncated_normal_initializer(stddev=0.01),
                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     l4_fuse = tf.add(l4_score, l7_2x)
     l4_fuse_2x = tf.layers.conv2d_transpose(l4_fuse, num_classes, 4, 2, padding='same',
-                                            kernel_initializer= tf.random_normal_initializer(stddev=0.01),
+                                            kernel_initializer= tf.truncated_normal_initializer(stddev=0.01),
                                             kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     # Score layer3, fuse with previous layer, and 8x upsample (output is FCN-8s)
     l3_score = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='same',
-                                kernel_initializer= tf.random_normal_initializer(stddev=0.01),
+                                kernel_initializer= tf.truncated_normal_initializer(stddev=0.01),
                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     l3_fuse = tf.add(l3_score, l4_fuse_2x)
     fcn_8s = tf.layers.conv2d_transpose(l3_fuse, num_classes, 16, 8, padding='same',
-                                        kernel_initializer= tf.random_normal_initializer(stddev=0.01),
+                                        kernel_initializer= tf.truncated_normal_initializer(stddev=0.01),
                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     return fcn_8s
