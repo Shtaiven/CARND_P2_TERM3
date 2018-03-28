@@ -1,4 +1,5 @@
 import os.path
+import datetime
 import tensorflow as tf
 import helper
 import warnings
@@ -97,8 +98,12 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
     correct_label = tf.reshape(correct_label, (-1, num_classes))
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=correct_label))
+
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    reg_constant = 0.1
+
     optimizer = tf.train.AdamOptimizer(learning_rate)
-    train_op = optimizer.minimize(cross_entropy_loss)
+    train_op = optimizer.minimize(cross_entropy_loss + reg_constant * sum(reg_losses))
 
     return logits, train_op, cross_entropy_loss
 tests.test_optimize(optimize)
@@ -119,7 +124,13 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    print('Training over %d epochs with batch size %d' % (epochs, batch_size))
+    kp = 0.85  # keep probability
+    lr = 0.0001 # learning rate
+
+    print('Training with parameters:\n'
+          '  epochs %d | batch size %d | keep prob %f | learing rate %f' %
+          (epochs, batch_size, kp, lr))
+    start_t = datetime.datetime.now()
     for epoch in range(epochs):
         batch = 1
         for image, label in get_batches_fn(batch_size):
@@ -127,21 +138,31 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             feed_dict = {
                 input_image: image,
                 correct_label: label,
-                keep_prob: 0.85,
-                learning_rate: 0.001}
+                keep_prob: kp,
+                learning_rate: lr}
             sess.run(train_op, feed_dict=feed_dict)
 
             feed_dict[keep_prob] = 1.0
             loss = sess.run(cross_entropy_loss, feed_dict=feed_dict)
+
             print('Epoch {:>2}, Batch {:>2} - Loss: {:>10.4f}'.format(epoch + 1, batch, loss))
             batch += 1
+    print('Training completed in %s' % (datetime.datetime.now() - start_t))
+    print('  epochs %d | batch size %d | keep prob %f | learing rate %f' % (epochs, batch_size, kp, lr))
 tests.test_train_nn(train_nn)
 
 
 def run():
     # Hyperparameters
-    num_epochs = 10
-    batch_size = 24  # Highest I can make batch size on my local machine on Windows 10
+    num_epochs = 30
+    batch_size = 3
+    # Other hyerparameters to tune:
+    #   Kernel optimizer stddev (in layers)
+    #   Kernel regularizer scale (in layers)
+    #   AdamOptimizer beta1, beta2, epsilon (in optimize)
+    #   Regularization loss scaling constant (in optimize)
+    #   Learning rate (in train_nn)
+    #   Keep probability (in train_nn)
 
     num_classes = 2  # try changing to 3! modify get_batch_fn to do this
     image_shape = (160, 576)
